@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block page_title %}Listening History{% endblock %}
+{% block content %}
+
+<div class="tab-row">
+  <button class="tab active" onclick="showSection('timeline',this)">Timeline</button>
+  <button class="tab" onclick="showSection('repeats',this)">Most replayed</button>
+  <button class="tab" onclick="showSection('recent',this)">Recent tracks</button>
+</div>
+
+<div class="loading-overlay show" id="h-loading"><div class="spinner"></div> Loading history…</div>
+
+<div id="section-timeline" style="display:none;"></div>
+<div id="section-repeats" style="display:none;"></div>
+<div id="section-recent" style="display:none;"></div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let loaded = {};
+
+async function showSection(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['timeline','repeats','recent'].forEach(s => document.getElementById('section-'+s).style.display = 'none');
+
+  if (!loaded[name]) {
+    document.getElementById('h-loading').classList.add('show');
+    await loadSection(name);
+    document.getElementById('h-loading').classList.remove('show');
+    loaded[name] = true;
+  }
+  document.getElementById('section-'+name).style.display = 'block';
+}
+
+async function loadSection(name) {
+  if (name === 'timeline') {
+    const data = await fetch('/api/history/timeline').then(r => r.json());
+    document.getElementById('section-timeline').innerHTML = data.length === 0
+      ? `<div class="empty-state"><div class="empty-icon">♪</div><div class="empty-text">No history yet</div></div>`
+      : data.map(day => `
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+            ${day.date}
+            <span class="badge badge-accent">${day.count} plays</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            ${day.tracks.map(t => trackRow(t)).join('')}
+          </div>
+        </div>
+      `).join('');
+  }
+
+  if (name === 'repeats') {
+    const data = await fetch('/api/history/repeats').then(r => r.json());
+    document.getElementById('section-repeats').innerHTML = data.length === 0
+      ? `<div class="empty-state"><div class="empty-icon">🔁</div><div class="empty-text">No repeated tracks in recent history</div></div>`
+      : `<div style="display:flex;flex-direction:column;gap:6px;">` +
+        data.map(t => `
+          <div class="dupe-row">
+            ${t.album_image ? `<img src="${t.album_image}" style="width:38px;height:38px;border-radius:var(--radius);object-fit:cover;flex-shrink:0;">` : ''}
+            <div style="flex:1;min-width:0;">
+              <div class="dupe-name">${t.name}</div>
+              <div class="dupe-artists">${t.artists.join(', ')}</div>
+            </div>
+            <span class="badge badge-warn">×${t.play_count}</span>
+            ${t.preview_url ? `<button class="preview-play" onclick="togglePreview(this,'${t.preview_url}')">▶</button>` : ''}
+          </div>
+        `).join('') + `</div>`;
+  }
+
+  if (name === 'recent') {
+    const data = await fetch('/api/history/recent').then(r => r.json());
+    document.getElementById('section-recent').innerHTML = data.length === 0
+      ? `<div class="empty-state"><div class="empty-icon">♪</div><div class="empty-text">No recent tracks</div></div>`
+      : `<div style="display:flex;flex-direction:column;gap:5px;">` +
+        data.map(trackRow).join('') + `</div>`;
+  }
+}
+
+function trackRow(t) {
+  const time = t.played_at ? new Date(t.played_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+  return `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);">
+      ${t.album_image ? `<img src="${t.album_image}" style="width:34px;height:34px;border-radius:var(--radius);object-fit:cover;flex-shrink:0;">` : ''}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${t.artists.join(', ')}</div>
+      </div>
+      <span style="font-size:10px;color:var(--text3);flex-shrink:0;">${time}</span>
+      ${t.preview_url ? `<button class="preview-play" onclick="togglePreview(this,'${t.preview_url}')">▶</button>` : ''}
+    </div>`;
+}
+
+let currentAudio = null;
+function togglePreview(btn, url) {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; document.querySelectorAll('.preview-play').forEach(b => b.textContent='▶'); }
+  if (btn.textContent === '▶') {
+    currentAudio = new Audio(url);
+    currentAudio.play();
+    btn.textContent = '⏹';
+    currentAudio.onended = () => { btn.textContent = '▶'; currentAudio = null; };
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('h-loading').classList.add('show');
+  await loadSection('timeline');
+  document.getElementById('h-loading').classList.remove('show');
+  loaded['timeline'] = true;
+  document.getElementById('section-timeline').style.display = 'block';
+});
+</script>
+{% endblock %}

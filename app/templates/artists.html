@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Artists{% endblock %}
+{% block page_title %}Artists{% endblock %}
+{% block content %}
+
+<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+  <div class="search-wrap" style="max-width:260px;">
+    <span class="search-icon">⌕</span>
+    <input id="artist-search" class="search-input" type="text" placeholder="Search artists…">
+  </div>
+  <span id="artist-count" style="font-size:11px;color:var(--text3);margin-left:auto;"></span>
+</div>
+
+<div class="loading-overlay show" id="a-loading"><div class="spinner"></div> Loading artists…</div>
+<div class="artist-grid" id="artist-grid"></div>
+
+<!-- Artist detail drawer -->
+<div id="artist-drawer" style="display:none;position:fixed;right:0;top:0;bottom:0;width:340px;background:var(--surface);border-left:1px solid var(--border2);z-index:200;overflow-y:auto;padding:24px;">
+  <button onclick="closeDrawer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;">✕</button>
+  <div id="drawer-content"></div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let allArtists = [];
+
+async function loadArtists(q = '') {
+  document.getElementById('a-loading').classList.add('show');
+  document.getElementById('artist-grid').innerHTML = '';
+  const params = q ? `?q=${encodeURIComponent(q)}` : '';
+  const data = await fetch('/api/artists' + params).then(r => r.json());
+  allArtists = data;
+  document.getElementById('a-loading').classList.remove('show');
+  document.getElementById('artist-count').textContent = `${data.length} artists`;
+
+  if (data.length === 0) {
+    document.getElementById('artist-grid').innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-icon">♪</div>
+        <div class="empty-text">No artists found</div>
+        <div class="empty-sub">Try a different search term</div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('artist-grid').innerHTML = data.map(a => {
+    const initials = a.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    const genreTags = a.genres.slice(0,2).map(g => `<span class="genre-tag">${g}</span>`).join('');
+    return `
+    <div class="artist-card" onclick="openDrawer('${a.id}')">
+      <div class="artist-avatar">
+        ${a.image ? `<img src="${a.image}" alt="${a.name}">` : initials}
+      </div>
+      <div class="artist-name">${a.name}</div>
+      <div class="artist-meta">${a.track_count} tracks · ${a.playlist_count} playlists</div>
+      <div class="artist-genres">${genreTags}</div>
+      <button class="btn btn-sm" style="width:100%;margin-top:10px;"
+        onclick="event.stopPropagation();createPlaylist('${a.id}','${a.name.replace(/'/g,"\\'")}')">
+        + Create playlist
+      </button>
+    </div>`;
+  }).join('');
+}
+
+async function openDrawer(artistId) {
+  document.getElementById('artist-drawer').style.display = 'block';
+  document.getElementById('drawer-content').innerHTML = `<div class="loading-overlay show"><div class="spinner"></div> Loading…</div>`;
+  const data = await fetch(`/api/artist/${artistId}/tracks`).then(r => r.json());
+  const a = data.artist;
+  const tracks = data.tracks || [];
+  const initials = a.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+
+  document.getElementById('drawer-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div class="artist-avatar" style="width:52px;height:52px;font-size:16px;">${initials}</div>
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--text);">${a.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${a.track_count} tracks · ${a.playlist_count} playlists</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:16px;"
+      onclick="createPlaylist('${artistId}','${a.name.replace(/'/g,"\\'")}')">
+      + Create artist playlist
+    </button>
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);margin-bottom:10px;">Tracks in your library</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${tracks.map(t => `
+        <div style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);">
+          <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.name}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${Math.floor(t.duration_ms/60000)}:${String(Math.floor((t.duration_ms%60000)/1000)).padStart(2,'0')}</div>
+          ${t.preview_url ? `
+            <div class="preview-player">
+              <button class="preview-play" onclick="togglePreview(this,'${t.preview_url}')">▶</button>
+              <span style="font-size:10px;color:var(--text3);">30s preview</span>
+            </div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function closeDrawer() {
+  document.getElementById('artist-drawer').style.display = 'none';
+  stopAllPreviews();
+}
+
+let currentAudio = null;
+function togglePreview(btn, url) {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; document.querySelectorAll('.preview-play').forEach(b => b.textContent = '▶'); }
+  if (btn.textContent === '▶') {
+    currentAudio = new Audio(url);
+    currentAudio.play();
+    btn.textContent = '⏹';
+    currentAudio.onended = () => { btn.textContent = '▶'; currentAudio = null; };
+  }
+}
+function stopAllPreviews() {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+}
+
+async function createPlaylist(artistId, artistName) {
+  showToast(`Creating playlist for ${artistName}…`);
+  try {
+    const resp = await fetch(`/api/artists/${artistId}/create-playlist?public=false`, { method: 'POST' });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    showToast(`✓ "${data.name}" created with ${data.track_count} tracks`);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+document.getElementById('artist-search').addEventListener('input', e => loadArtists(e.target.value));
+document.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const q = urlParams.get('q') || '';
+  if (q) document.getElementById('artist-search').value = q;
+  loadArtists(q);
+});
+</script>
+{% endblock %}

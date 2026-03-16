@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyber">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Melodex — Error</title>
+  <link rel="stylesheet" href="/static/css/themes.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .err-box { background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius); padding:40px 36px; max-width:400px; width:100%; text-align:center; }
+    .err-code { font-size:48px; font-weight:700; color:var(--accent); margin-bottom:8px; }
+    .err-title { font-size:16px; font-weight:600; color:var(--text); margin-bottom:10px; }
+    .err-msg { font-size:12px; color:var(--text3); margin-bottom:24px; line-height:1.7; word-break:break-word; }
+    .err-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+  <div class="err-box">
+    <div class="err-code">Oops</div>
+    <div class="err-title">Something went wrong</div>
+    <div class="err-msg">{{ error or "An unexpected error occurred." }}</div>
+    <div class="err-actions">
+      <a href="/dashboard" class="btn btn-primary">Go to dashboard</a>
+      <a href="/logout" class="btn">Re-login</a>
+    </div>
+  </div>
+  <script src="/static/js/theme.js"></script>
+</body>
+</html>

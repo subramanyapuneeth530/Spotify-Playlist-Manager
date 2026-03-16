@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="notify-bar" class="notify-bar" style="display:none;">
+  <div class="notify-dot"></div>
+  <span id="notify-text">Index ready</span>
+  <button class="btn btn-sm" style="margin-left:auto;" onclick="refreshIndex()">Refresh</button>
+</div>
+
+<!-- Stats row -->
+<div class="grid-4" style="margin-bottom:20px;" id="stats-grid">
+  <div class="stat-card"><div class="stat-label">Total tracks</div><div class="stat-value" id="s-tracks">—</div><div class="stat-sub" id="s-tracks-sub"></div></div>
+  <div class="stat-card"><div class="stat-label">Unique artists</div><div class="stat-value" id="s-artists">—</div><div class="stat-sub" id="s-artists-sub"></div></div>
+  <div class="stat-card"><div class="stat-label">Total time</div><div class="stat-value" id="s-hours">—</div><div class="stat-sub">hours of music</div></div>
+  <div class="stat-card"><div class="stat-label">Duplicates</div><div class="stat-value" id="s-dupes" style="color:#d2a850;">—</div><div class="stat-sub"><a href="/duplicates">review →</a></div></div>
+</div>
+
+<div class="grid-2" style="margin-bottom:20px;">
+  <!-- Top artists chart -->
+  <div class="card">
+    <div class="card-title">Top artists by track count</div>
+    <div id="artist-bars"></div>
+  </div>
+
+  <!-- Recent playlists -->
+  <div class="card">
+    <div class="card-title">Playlists</div>
+    <div id="playlist-list"></div>
+    <a href="/playlists" style="display:block;text-align:center;font-size:11px;color:var(--text3);margin-top:12px;">View all →</a>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:20px;">
+  <!-- Overlap matrix -->
+  <div class="card">
+    <div class="card-title">Track overlap — tracks appearing in multiple playlists</div>
+    <div class="grid-4" id="overlap-grid" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- Health score -->
+  <div class="card" style="display:flex;align-items:center;gap:24px;">
+    <div>
+      <div class="card-title">Library health score</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.7;max-width:200px;">
+        Scored on artist variety, duplicate rate, and playlist structure.
+      </div>
+      <a href="/analytics" style="font-size:11px;color:var(--accent);margin-top:8px;display:inline-block;">Full analytics →</a>
+    </div>
+    <div style="text-align:center;flex-shrink:0;">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--surface2)" stroke-width="8"/>
+        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--accent)" stroke-width="8"
+          stroke-dasharray="201" id="health-circle" stroke-dashoffset="201"
+          stroke-linecap="round" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 1s;"/>
+      </svg>
+      <div id="health-val" style="font-size:22px;font-weight:600;color:var(--text);margin-top:-52px;position:relative;">—</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:30px;">/ 100</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDashboard() {
+  const data = await fetch('/api/analytics/summary').then(r => r.json());
+
+  document.getElementById('s-tracks').textContent   = data.total_tracks.toLocaleString();
+  document.getElementById('s-tracks-sub').textContent = `across ${data.total_playlists} playlists`;
+  document.getElementById('s-artists').textContent  = data.unique_artists.toLocaleString();
+  document.getElementById('s-hours').textContent    = data.total_duration_hrs;
+  document.getElementById('s-dupes').textContent    = data.duplicate_count;
+
+  // health ring
+  const score = data.health_score;
+  document.getElementById('health-val').textContent = score;
+  const circumference = 201;
+  document.getElementById('health-circle').style.strokeDashoffset = circumference - (circumference * score / 100);
+
+  // notify bar
+  const age = data.cache_age_seconds;
+  if (age !== null) {
+    const mins = Math.round(age / 60);
+    document.getElementById('notify-text').textContent = `Index synced ${mins < 1 ? 'just now' : mins + ' min ago'}`;
+    document.getElementById('notify-bar').style.display = 'flex';
+  }
+
+  // top artist bars
+  const max = data.top_artists[0]?.track_count || 1;
+  document.getElementById('artist-bars').innerHTML = data.top_artists.slice(0,7).map(a => `
+    <div class="bar-row">
+      <span class="bar-label">${a.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(a.track_count/max*100)}%"></div></div>
+      <span class="bar-count">${a.track_count}</span>
+    </div>
+  `).join('');
+
+  // overlap matrix
+  const ov = data.overlap;
+  document.getElementById('overlap-grid').innerHTML = [
+    [1,'in 1 list'],[2,'in 2 lists'],[3,'in 3 lists'],[4,'in 4+ lists']
+  ].map(([n,label]) => `
+    <div style="padding:12px;background:var(--stat-bg);border:1px solid var(--border);border-radius:var(--radius);text-align:center;">
+      <div style="font-size:20px;font-weight:600;color:var(--text);">${ov[n] || 0}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;">${label}</div>
+    </div>
+  `).join('');
+
+  // playlist list
+  const plData = await fetch('/api/playlists?sort=tracks').then(r => r.json());
+  document.getElementById('playlist-list').innerHTML = plData.slice(0,5).map(p => `
+    <div class="pl-row" onclick="window.location='/playlists'">
+      ${p.image ? `<img class="pl-cover" src="${p.image}" alt="">` : `<div class="pl-cover">♪</div>`}
+      <div style="flex:1;min-width:0;">
+        <div class="pl-name">${p.name}</div>
+        <div class="pl-meta">${p.total} tracks</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

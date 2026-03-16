@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block content %}
+
+<div class="loading-overlay show" id="an-loading"><div class="spinner"></div> Crunching your library…</div>
+<div id="an-content" style="display:none;">
+
+  <div class="grid-4" style="margin-bottom:20px;" id="an-stats"></div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Top artists by track count</div>
+      <canvas id="artists-chart" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Largest playlists</div>
+      <canvas id="playlists-chart" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Genre breakdown</div>
+      <div class="loading-overlay show" id="genre-loading" style="padding:20px;"><div class="spinner"></div></div>
+      <canvas id="genre-chart" height="240" style="display:none;"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Track overlap</div>
+      <div id="overlap-detail" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title">Library health score</div>
+    <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--surface2)" stroke-width="10"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--accent)" stroke-width="10"
+            stroke-dasharray="251" id="health-ring" stroke-dashoffset="251"
+            stroke-linecap="round" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 1.2s;"/>
+        </svg>
+        <div id="health-num" style="font-size:28px;font-weight:600;color:var(--text);margin-top:-60px;position:relative;">—</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:32px;">/ 100</div>
+      </div>
+      <div id="health-breakdown" style="flex:1;"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadAnalytics() {
+  const data = await fetch('/api/analytics/summary').then(r => r.json());
+  document.getElementById('an-loading').classList.remove('show');
+  document.getElementById('an-content').style.display = 'block';
+
+  // Stats
+  document.getElementById('an-stats').innerHTML = [
+    { label: 'Playlists',        value: data.total_playlists,      sub: '' },
+    { label: 'Unique tracks',    value: data.total_tracks,         sub: '' },
+    { label: 'Artists',          value: data.unique_artists,       sub: '' },
+    { label: 'Hours of music',   value: data.total_duration_hrs,   sub: '' },
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-value">${s.value.toLocaleString()}</div>
+      ${s.sub ? `<div class="stat-sub">${s.sub}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Charts
+  const artistLabels = data.top_artists.slice(0,8).map(a => a.name);
+  const artistCounts = data.top_artists.slice(0,8).map(a => a.track_count);
+  drawBarChart('artists-chart', artistLabels, artistCounts, 'Tracks');
+
+  const plLabels = data.playlist_sizes.slice(0,8).map(p => p.name.length > 18 ? p.name.slice(0,16)+'…' : p.name);
+  const plCounts  = data.playlist_sizes.slice(0,8).map(p => p.total);
+  drawBarChart('playlists-chart', plLabels, plCounts, 'Tracks');
+
+  // Overlap
+  const ov = data.overlap;
+  document.getElementById('overlap-detail').innerHTML = [
+    { label: 'Unique to 1 playlist', count: ov[1] || 0 },
+    { label: 'In 2 playlists',       count: ov[2] || 0, warn: true },
+    { label: 'In 3 playlists',       count: ov[3] || 0, warn: true },
+    { label: 'In 4+ playlists',      count: ov[4] || 0, warn: true },
+  ].map(o => {
+    const max = (ov[1] || 1);
+    return `
+      <div class="bar-row">
+        <span class="bar-label">${o.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(o.count/max*100)}%;${o.warn && o.count > 0 ? 'background:#d2a850;' : ''}"></div></div>
+        <span class="bar-count">${o.count}</span>
+      </div>`;
+  }).join('');
+
+  // Health ring
+  const score = data.health_score;
+  document.getElementById('health-num').textContent = score;
+  document.getElementById('health-ring').style.strokeDashoffset = 251 - (251 * score / 100);
+  document.getElementById('health-breakdown').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:12px;color:var(--text2);">Score is based on:</div>
+      ${[
+        ['Artist variety', Math.round(data.unique_artists / Math.max(data.total_tracks,1) * 1000) / 10 + '%'],
+        ['Duplicate rate', data.duplicate_count + ' tracks duplicated'],
+        ['Library size',   data.total_tracks + ' total tracks'],
+      ].map(([label, val]) => `
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--text2);">${label}</span>
+          <span style="color:var(--text3);">${val}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Genre chart (separate fetch — may be slow)
+  try {
+    const genres = await fetch('/api/genres').then(r => r.json());
+    document.getElementById('genre-loading').classList.remove('show');
+    document.getElementById('genre-chart').style.display = 'block';
+    const top = genres.slice(0, 10);
+    drawDonutChart('genre-chart', top.map(g => g.genre), top.map(g => g.count));
+  } catch(e) {
+    document.getElementById('genre-loading').innerHTML = '<span style="font-size:11px;color:var(--text3);">Genre data unavailable</span>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadAnalytics);
+</script>
+{% endblock %}

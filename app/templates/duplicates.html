@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Duplicates{% endblock %}
+{% block page_title %}Duplicate Tracks{% endblock %}
+{% block content %}
+
+<div class="notify-bar" style="margin-bottom:16px;">
+  <div class="notify-dot"></div>
+  <span>These tracks appear in more than one of your playlists. Remove them from specific playlists to tidy your library.</span>
+</div>
+
+<div class="loading-overlay show" id="dupe-loading"><div class="spinner"></div> Scanning for duplicates…</div>
+<div id="dupe-summary" style="margin-bottom:16px;display:none;"></div>
+<div id="dupe-list" style="display:none;"></div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadDupes() {
+  const data = await fetch('/api/duplicates').then(r => r.json());
+  document.getElementById('dupe-loading').classList.remove('show');
+
+  if (data.length === 0) {
+    document.getElementById('dupe-summary').style.display = 'block';
+    document.getElementById('dupe-summary').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">✓</div>
+        <div class="empty-text">No duplicates found</div>
+        <div class="empty-sub">Your library is clean!</div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('dupe-summary').style.display = 'block';
+  document.getElementById('dupe-summary').innerHTML = `
+    <div class="stat-card" style="max-width:300px;">
+      <div class="stat-label">Duplicate tracks</div>
+      <div class="stat-value" style="color:#d2a850;">${data.length}</div>
+      <div class="stat-sub">tracks in 2+ playlists</div>
+    </div>`;
+
+  document.getElementById('dupe-list').style.display = 'block';
+  document.getElementById('dupe-list').innerHTML = data.map(d => `
+    <div class="dupe-row" id="dupe-${d.id}">
+      <div style="flex:1;min-width:0;">
+        <div class="dupe-name">${d.name}</div>
+        <div class="dupe-artists" style="margin-top:2px;">${d.artists.join(', ')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+          ${d.playlists.map(p => `
+            <span class="badge badge-accent" style="cursor:pointer;display:flex;align-items:center;gap:4px;"
+              onclick="removeFrom('${d.id}','${p.id}','${p.name.replace(/'/g,"\\'")}',this)">
+              ${p.name} <span style="opacity:0.6;font-size:9px;">✕</span>
+            </span>
+          `).join('')}
+        </div>
+      </div>
+      <span class="badge badge-warn">${d.playlist_count} playlists</span>
+    </div>
+  `).join('');
+}
+
+async function removeFrom(trackId, playlistId, playlistName, badgeEl) {
+  if (!confirm(`Remove this track from "${playlistName}"?`)) return;
+  showToast(`Removing from ${playlistName}…`);
+  try {
+    const resp = await fetch(`/api/duplicates/${trackId}/from/${playlistId}`, { method: 'DELETE' });
+    const data = await resp.json();
+    if (!data.success) throw new Error('Failed');
+    badgeEl.remove();
+    showToast(`✓ Removed from "${playlistName}"`);
+    // Check if row should be removed (only 1 playlist left)
+    const remaining = document.querySelectorAll(`#dupe-${trackId} .badge-accent`);
+    if (remaining.length < 2) {
+      document.getElementById(`dupe-${trackId}`)?.remove();
+    }
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadDupes);
+</script>
+{% endblock %}

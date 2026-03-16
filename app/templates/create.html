@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Create Playlist{% endblock %}
+{% block page_title %}Create Playlist{% endblock %}
+{% block content %}
+
+<div class="grid-2">
+  <!-- Create artist playlist -->
+  <div class="card">
+    <div class="card-title">Create artist playlist</div>
+    <div class="form-group">
+      <label class="form-label">Artist</label>
+      <select id="artist-select" class="form-select" onchange="updatePlaylistName()">
+        <option value="">Loading artists…</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Playlist name</label>
+      <input id="create-name" class="form-input" type="text" placeholder="Artist — all tracks">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div class="toggle-wrap" onclick="this.querySelector('.toggle-track').classList.toggle('on')">
+        <div class="toggle-track" id="public-toggle"><div class="toggle-thumb"></div></div>
+        <span class="toggle-label">Make public on Spotify</span>
+      </div>
+    </div>
+    <div id="create-progress" style="display:none;margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Creating playlist…</div>
+      <div class="progress-track"><div class="progress-fill" id="create-prog-fill" style="width:0%"></div></div>
+    </div>
+    <button class="btn btn-primary" onclick="doCreate()">Create playlist</button>
+  </div>
+
+  <!-- Bulk create -->
+  <div class="card">
+    <div class="card-title">Bulk create — top artists</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.7;">
+      Create playlists for your top artists in one go. Only creates playlists that don't already exist.
+    </p>
+    <div class="form-group">
+      <label class="form-label">How many top artists?</label>
+      <input id="bulk-count" class="form-input" type="number" min="1" max="20" value="5" style="max-width:100px;">
+    </div>
+    <div id="bulk-preview" style="margin-bottom:14px;display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto;"></div>
+    <button class="btn btn-primary" onclick="doBulkCreate()">Bulk create</button>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let artists = [];
+
+async function loadArtists() {
+  artists = await fetch('/api/artists').then(r => r.json());
+  const select = document.getElementById('artist-select');
+  select.innerHTML = `<option value="">Select an artist…</option>` +
+    artists.map(a => `<option value="${a.id}" data-name="${a.name}" data-count="${a.track_count}">${a.name} (${a.track_count} tracks)</option>`).join('');
+
+  // bulk preview
+  updateBulkPreview();
+}
+
+function updatePlaylistName() {
+  const select = document.getElementById('artist-select');
+  const opt = select.options[select.selectedIndex];
+  if (opt && opt.value) {
+    document.getElementById('create-name').value = `${opt.dataset.name} — all tracks`;
+  }
+}
+
+function updateBulkPreview() {
+  const count = parseInt(document.getElementById('bulk-count').value) || 5;
+  const top = artists.slice(0, count);
+  document.getElementById('bulk-preview').innerHTML = top.map(a => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius);font-size:12px;color:var(--text2);">
+      <span style="flex:1;">${a.name}</span>
+      <span style="color:var(--text3);font-size:10px;">${a.track_count} tracks</span>
+    </div>
+  `).join('');
+}
+
+async function doCreate() {
+  const artistId = document.getElementById('artist-select').value;
+  const name = document.getElementById('create-name').value.trim();
+  const isPublic = document.getElementById('public-toggle').classList.contains('on');
+  if (!artistId) { showToast('Select an artist first'); return; }
+  if (!name)     { showToast('Enter a playlist name'); return; }
+
+  document.getElementById('create-progress').style.display = 'block';
+  const fill = document.getElementById('create-prog-fill');
+  let w = 0;
+  const iv = setInterval(() => { w = Math.min(w + 15, 85); fill.style.width = w + '%'; }, 200);
+
+  try {
+    const params = new URLSearchParams({ name, public: isPublic });
+    const resp = await fetch(`/api/artists/${artistId}/create-playlist?${params}`, { method: 'POST' });
+    const data = await resp.json();
+    clearInterval(iv);
+    fill.style.width = '100%';
+    if (data.error) throw new Error(data.error);
+    setTimeout(() => { document.getElementById('create-progress').style.display = 'none'; fill.style.width = '0%'; }, 500);
+    showToast(`✓ "${data.name}" created with ${data.track_count} tracks`);
+  } catch(e) {
+    clearInterval(iv);
+    document.getElementById('create-progress').style.display = 'none';
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function doBulkCreate() {
+  const count = parseInt(document.getElementById('bulk-count').value) || 5;
+  const top = artists.slice(0, count);
+  showToast(`Creating ${top.length} playlists…`);
+  let created = 0, skipped = 0;
+
+  for (const artist of top) {
+    try {
+      const resp = await fetch(`/api/artists/${artist.id}/create-playlist?public=false`, { method: 'POST' });
+      const data = await resp.json();
+      if (data.error) skipped++; else created++;
+    } catch { skipped++; }
+  }
+
+  showToast(`✓ Created ${created}, skipped ${skipped} (already exist)`);
+}
+
+document.getElementById('bulk-count').addEventListener('input', updateBulkPreview);
+document.addEventListener('DOMContentLoaded', loadArtists);
+</script>
+{% endblock %}

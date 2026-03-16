@@ -1,0 +1,172 @@
+/* ── Sidebar ─────────────────────────────────────────── */
+.logo-area {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+.logo-sub {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+
+.nav-section { padding: 14px 8px 6px; }
+.nav-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text3);
+  padding: 0 10px;
+  margin-bottom: 5px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  text-decoration: none;
+  transition: background 0.1s;
+  position: relative;
+}
+.nav-item:hover { background: var(--surface2); text-decoration: none; }
+.nav-item.active { background: var(--badge-bg); color: var(--badge-text); font-weight: 500; }
+.nav-pip  { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); flex-shrink: 0; transition: background 0.15s; }
+.nav-item.active .nav-pip { background: var(--accent); }
+.nav-count {
+  margin-left: auto;
+  font-size: 10px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+.user-foot {
+  margin-top: auto;
+  padding: 12px 10px;
+  border-top: 1px solid var(--border);
+}
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+}
+.user-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  color: var(--btn-text);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.uname { font-size: 12px; font-weight: 500; color: var(--text); }
+.uplan { font-size: 10px; color: var(--text3); }
+
+/* ── Topbar ──────────────────────────────────────────── */
+.page-title { font-size: 14px; font-weight: 600; color: var(--text); min-width: 100px; letter-spacing: 0.3px; }
+
+.theme-switcher { display: flex; gap: 5px; align-items: center; margin-left: auto; }
+.theme-switcher-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-right: 3px; }
+.theme-btn {
+  width: 19px; height: 19px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.theme-btn:hover { transform: scale(1.15); }
+.theme-btn.active { border-color: var(--text); }
+
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  width: 32px; height: 32px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: background 0.1s;
+}
+.icon-btn:hover { background: var(--surface2); }
+
+/* ── Toast ───────────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+}
+.toast {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-family: var(--font-body);
+  animation: toastIn 0.25s ease;
+  max-width: 280px;
+}
+.toast.removing { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(10px); } }
+
+/* ── Keyboard shortcuts panel ────────────────────────── */
+.shortcuts-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.shortcuts-overlay.show { display: flex; }
+.shortcuts-panel {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 360px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.shortcuts-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+.shortcut-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.shortcut-row:last-child { border-bottom: none; }
+.shortcut-desc { font-size: 12px; color: var(--text2); }
+.shortcut-key { font-family: monospace; font-size: 11px; padding: 2px 7px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); }
+
+/* ── Index building banner ───────────────────────────── */
+.build-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  background: var(--badge-bg);
+  border-bottom: 1px solid var(--border2);
+  font-size: 12px;
+  color: var(--badge-text);
+}
+.build-banner.show { display: flex; }
+.build-banner .progress-track { flex: 1; }

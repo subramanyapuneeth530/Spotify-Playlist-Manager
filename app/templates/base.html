@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyber">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Melodex — {% block title %}Playlist Manager{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/themes.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-name" id="logo-name">MELODEX</div>
+      <div class="logo-sub" id="logo-sub">// playlist manager</div>
+    </div>
+
+    <nav>
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <a href="/dashboard" class="nav-item" data-path="/dashboard">
+          <div class="nav-pip"></div>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="/playlists" class="nav-item" data-path="/playlists">
+          <div class="nav-pip"></div>
+          <span class="nav-text">Playlists</span>
+        </a>
+        <a href="/artists" class="nav-item" data-path="/artists">
+          <div class="nav-pip"></div>
+          <span class="nav-text">Artists</span>
+        </a>
+        <a href="/analytics" class="nav-item" data-path="/analytics">
+          <div class="nav-pip"></div>
+          <span class="nav-text">Analytics</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-label">Tools</div>
+        <a href="/duplicates" class="nav-item" data-path="/duplicates">
+          <div class="nav-pip"></div>
+          <span class="nav-text">Duplicates</span>
+          <span class="nav-count" id="dupe-count" style="display:none;"></span>
+        </a>
+        <a href="/history" class="nav-item" data-path="/history">
+          <div class="nav-pip"></div>
+          <span class="nav-text">History</span>
+        </a>
+        <a href="/create" class="nav-item" data-path="/create">
+          <div class="nav-pip"></div>
+          <span class="nav-text">Create</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-label">Export</div>
+        <a href="/api/export/csv" class="nav-item">
+          <div class="nav-pip"></div>
+          <span class="nav-text">CSV export</span>
+        </a>
+        <a href="/api/export/json" class="nav-item">
+          <div class="nav-pip"></div>
+          <span class="nav-text">JSON export</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="user-foot">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">…</div>
+        <div style="min-width:0;">
+          <div class="uname" id="user-name">Loading…</div>
+          <div class="uplan" id="user-plan">Spotify Premium</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="build-banner" id="build-banner">
+      <div class="spinner"></div>
+      <span>Building your library index…</span>
+      <div class="progress-track" style="flex:1;max-width:200px;">
+        <div class="progress-fill" id="build-progress" style="width:0%"></div>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <span class="page-title">{% block page_title %}{% endblock %}</span>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input id="global-search" class="search-input" type="text" placeholder="Search artists, tracks, playlists…">
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" title="Refresh index" onclick="refreshIndex()">↻</button>
+        <button class="icon-btn" title="Keyboard shortcuts (?)" onclick="document.getElementById('shortcuts-overlay').classList.toggle('show')">⌨</button>
+        <a href="/logout" class="icon-btn" title="Logout">⏏</a>
+      </div>
+      <div class="theme-switcher">
+        <span class="theme-switcher-label">theme</span>
+        <div class="theme-btn" data-theme="cyber"    style="background:#00ff95;"                    title="Cyber"></div>
+        <div class="theme-btn" data-theme="paper"    style="background:#7a3b1e;"                    title="Paper"></div>
+        <div class="theme-btn" data-theme="aurora"   style="background:#3344ee;"                    title="Aurora"></div>
+        <div class="theme-btn" data-theme="obsidian" style="background:#d2a850;"                    title="Obsidian"></div>
+        <div class="theme-btn" data-theme="chalk"    style="background:#fff;border:1px solid #555;" title="Chalk"></div>
+      </div>
+    </header>
+
+    <main class="page-body">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<div id="shortcuts-overlay" class="shortcuts-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="shortcuts-panel">
+    <div class="shortcuts-title">Keyboard shortcuts</div>
+    <div id="shortcuts-list"></div>
+  </div>
+</div>
+
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/toast.js"></script>
+<script src="/static/js/search.js"></script>
+<script src="/static/js/shortcuts.js"></script>
+<script src="/static/js/charts.js"></script>
+<script>
+// Active nav highlight based on current URL
+(function() {
+  var path = window.location.pathname;
+  document.querySelectorAll('.nav-item[data-path]').forEach(function(el) {
+    var match = path === el.dataset.path || (path === '/' && el.dataset.path === '/dashboard');
+    if (match) {
+      el.classList.add('active');
+      // Make the pip filled accent color on active item
+      var pip = el.querySelector('.nav-pip');
+      if (pip) pip.style.background = 'var(--accent)';
+    } else {
+      var pip2 = el.querySelector('.nav-pip');
+      if (pip2) pip2.style.background = 'var(--border2)';
+    }
+  });
+})();
+
+// Refresh index
+async function refreshIndex() {
+  showToast('Refreshing index…');
+  document.getElementById('build-banner').classList.add('show');
+  var fill = document.getElementById('build-progress');
+  var w = 0;
+  var iv = setInterval(function() {
+    w = Math.min(w + Math.random() * 12, 90);
+    if (fill) fill.style.width = w + '%';
+    if (w >= 90) clearInterval(iv);
+  }, 300);
+  try {
+    await fetch('/api/index?force=true');
+    clearInterval(iv);
+    if (fill) fill.style.width = '100%';
+    showToast('Index refreshed!');
+    setTimeout(function() { location.reload(); }, 600);
+  } catch(e) {
+    clearInterval(iv);
+    showToast('Refresh failed. Try again.');
+  } finally {
+    document.getElementById('build-banner').classList.remove('show');
+  }
+}
+
+// Duplicate count badge — only show if under 100 to avoid alarming numbers
+fetch('/api/duplicates').then(function(r) { return r.json(); }).then(function(dupes) {
+  if (dupes.length > 0 && dupes.length < 100) {
+    var badge = document.getElementById('dupe-count');
+    if (badge) {
+      badge.textContent = dupes.length;
+      badge.style.display = '';
+      badge.style.background = '#FAEEDA';
+      badge.style.color = '#633806';
+    }
+  }
+}).catch(function() {});
+
+// Load user profile from Spotify via /api/user
+(function() {
+  fetch('/api/user').then(function(r) {
+    if (!r.ok) throw new Error('not ok');
+    return r.json();
+  }).then(function(user) {
+    var nameEl   = document.getElementById('user-name');
+    var avatarEl = document.getElementById('user-avatar');
+    var planEl   = document.getElementById('user-plan');
+
+    // Display name — Spotify sometimes returns null, fall back to email prefix or generic
+    var name = user.display_name || user.email_prefix || 'Spotify User';
+    if (nameEl) nameEl.textContent = name;
+
+    // Plan
+    if (planEl && user.plan) {
+      planEl.textContent = user.plan === 'premium' ? 'Spotify Premium' : 'Spotify Free';
+    }
+
+    // Avatar — use profile image if available, else initials from name
+    if (avatarEl) {
+      if (user.image) {
+        avatarEl.innerHTML = '<img src="' + user.image + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+      } else {
+        var initials = name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+        avatarEl.textContent = initials || 'SP';
+      }
+    }
+  }).catch(function() {
+    // If /api/user fails (token issue etc), show a neutral fallback
+    var nameEl = document.getElementById('user-name');
+    var avatarEl = document.getElementById('user-avatar');
+    if (nameEl) nameEl.textContent = 'Spotify User';
+    if (avatarEl) avatarEl.textContent = 'SP';
+  });
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

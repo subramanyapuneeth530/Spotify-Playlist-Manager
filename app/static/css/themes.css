@@ -1,0 +1,104 @@
+/* ── Cyber (default) ─────────────────────────────────────── */
+[data-theme="cyber"] {
+  --font-body: 'Courier New', 'Courier', monospace;
+  --bg: #0a0a0f;
+  --sidebar: #0d0d14;
+  --surface: #13131e;
+  --surface2: #1a1a28;
+  --border: rgba(0,255,149,0.12);
+  --border2: rgba(0,255,149,0.3);
+  --accent: #00ff95;
+  --text: #e0ffe8;
+  --text2: #9dffc7;
+  --text3: rgba(0,255,149,0.45);
+  --badge-bg: rgba(0,255,149,0.08);
+  --badge-text: #00ff95;
+  --btn-bg: #00ff95;
+  --btn-text: #0a0a0f;
+  --stat-bg: #0d0d14;
+  --radius: 2px;
+}
+
+/* ── Paper ───────────────────────────────────────────────── */
+[data-theme="paper"] {
+  --font-body: 'Georgia', 'Times New Roman', serif;
+  --bg: #f5f0e8;
+  --sidebar: #ede8de;
+  --surface: #faf7f2;
+  --surface2: #e8e0d0;
+  --border: #c8b89a;
+  --border2: #a0896e;
+  --accent: #7a3b1e;
+  --text: #2c1a0e;
+  --text2: #5c3317;
+  --text3: #9a7255;
+  --badge-bg: #e8d5b8;
+  --badge-text: #5c3317;
+  --btn-bg: #7a3b1e;
+  --btn-text: #faf7f2;
+  --stat-bg: #ede8de;
+  --radius: 3px;
+}
+
+/* ── Aurora ──────────────────────────────────────────────── */
+[data-theme="aurora"] {
+  --font-body: 'Trebuchet MS', 'Lucida Sans', sans-serif;
+  --bg: #eef1ff;
+  --sidebar: #e4e8ff;
+  --surface: #ffffff;
+  --surface2: #eef1ff;
+  --border: #c0caff;
+  --border2: #7b8eff;
+  --accent: #3344ee;
+  --text: #080d3a;
+  --text2: #1a2baa;
+  --text3: #5566cc;
+  --badge-bg: #e4e8ff;
+  --badge-text: #1a2baa;
+  --btn-bg: #3344ee;
+  --btn-text: #ffffff;
+  --stat-bg: #eef1ff;
+  --radius: 14px;
+}
+
+/* ── Obsidian ─────────────────────────────────────────────── */
+[data-theme="obsidian"] {
+  --font-body: 'Palatino Linotype', 'Book Antiqua', serif;
+  --bg: #1a1712;
+  --sidebar: #120f0b;
+  --surface: #221e18;
+  --surface2: #2c2720;
+  --border: rgba(210,168,80,0.18);
+  --border2: rgba(210,168,80,0.45);
+  --accent: #d2a850;
+  --text: #f5e8cc;
+  --text2: #d2a850;
+  --text3: rgba(210,168,80,0.5);
+  --badge-bg: rgba(210,168,80,0.1);
+  --badge-text: #d2a850;
+  --btn-bg: #d2a850;
+  --btn-text: #1a1712;
+  --stat-bg: #120f0b;
+  --radius: 6px;
+}
+
+/* ── Chalk ────────────────────────────────────────────────── */
+[data-theme="chalk"] {
+  --font-body: 'Arial', 'Helvetica Neue', sans-serif;
+  --bg: #1a1a2e;
+  --sidebar: #12122a;
+  --surface: #1a1a2e;
+  --surface2: #12122a;
+  --border: rgba(255,255,255,0.1);
+  --border2: rgba(255,255,255,0.3);
+  --accent: #ffffff;
+  --text: #ffffff;
+  --text2: #cccccc;
+  --text3: rgba(255,255,255,0.4);
+  --badge-bg: rgba(255,255,255,0.08);
+  --badge-text: #ffffff;
+  --btn-bg: #ffffff;
+  --btn-text: #1a1a2e;
+  --stat-bg: #12122a;
+  --radius: 0px;
+}
